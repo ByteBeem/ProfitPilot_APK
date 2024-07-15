@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "ProfitPilot",
+    "slug": "Trading",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.jpeg",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo.jpeg",
+      "resizeMode": "cover",
+      "backgroundColor": "black"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.jpeg",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.bytebeem.App"
+    },
+    "web": {
+      "favicon": "./assets/logo.jpeg"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00c13ae2-92ff-4da9-a0ec-cf670ad7099f"
+      }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
