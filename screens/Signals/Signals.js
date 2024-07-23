@@ -4,43 +4,98 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import ErrorModal from '../../components/ErrorModal';
 
 const forexPairs = [
   { label: 'EUR/USD', value: 'EUR/USD' },
   { label: 'GBP/USD', value: 'GBP/USD' },
   { label: 'USD/JPY', value: 'USD/JPY' },
   { label: 'AUD/USD', value: 'AUD/USD' },
-  { label: 'USD/CAD', value: 'USD/CAD' },
+  { label: 'XAU/USD', value: 'XAU/USD' },
   { label: 'USD/CHF', value: 'USD/CHF' },
 ];
 
 const Signals = ({ navigation }) => {
   const [selectedPair, setSelectedPair] = useState('');
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+ 
+  const [signal, setSignal] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleLogOut = useCallback(async () => {
-    setIsLoggingOut(true);
-    const token = await SecureStore.getItemAsync('token');
+  const handleCloseError = () => {
+    setIsOpen(false);
+    setError(null);
+  };
+
+  const handleGenerate = useCallback(async (token , selectedPair) => {
+   
     try {
-      const response = await axios.post('http://13.48.249.94:3001/auth/logOut', {
-        token,
-      });
+
+      const response = await axios.post('http://13.48.249.94:3001/trading/signals', {
+        token: token,
+        pair: selectedPair
+
+      })
       if (response.status === 200) {
-        setIsLoggingOut(false);
-        await SecureStore.deleteItemAsync('token');
-        navigation.navigate("Login");
+        setSignal(response.data.signal);
       }
-    } catch (err) {
-      setError("Log Out Failed. Please try again.");
-      setIsLoggingOut(false);
-      setIsOpen(true);
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        setError(error.response.data.error);
+        setIsOpen(true);
+      }
+      else if (error.response && error.response.status === 403) {
+        setError(error.response.data.error);
+        setIsOpen(true);
+      } else if (error.request) {
+        setError("Something went wrong on our side.");
+        setIsOpen(true);
+      } else {
+        setError('An error occurred. Please try again.');
+        setIsOpen(true);
+      }
+    } finally {
+      setIsLoading(false);
     }
+
   }, []);
 
-  const handleGenerate = () => {
-    // Implement the generate signal logic here
-    alert(`Generating signal for ${selectedPair}`);
-  };
+  const CheckSubscription = useCallback(async () => {
+  
+    setIsLoading(true);
+    setSignal('');
+    const token = await SecureStore.getItemAsync('token');
+    try {
+      const response = await axios.post("http://13.48.249.94:3001/subscriptions/check-subscription", {
+        token,
+      });
+
+     
+      if (response.status === 200) {
+
+        await handleGenerate(token , selectedPair);
+        return;
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        setError(error.response.data.error);
+        setIsOpen(true);
+      }
+      else if (error.response && error.response.status === 403) {
+        setError(error.response.data.error);
+        setIsOpen(true);
+      } else if (error.request) {
+        setError("Something went wrong on our side.");
+        setIsOpen(true);
+      } else {
+        setError('An error occurred. Please try again.');
+        setIsOpen(true);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedPair]);
 
   return (
     <View style={styles.container}>
@@ -67,35 +122,45 @@ const Signals = ({ navigation }) => {
         </Picker>
       </View>
       <View style={styles.buttonContainer}>
-        <Button
-          title="Generate Signal"
-          onPress={handleGenerate}
-          disabled={!selectedPair}
-          color="#007BFF"
-        />
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#0000ff" />
+        ) : (
+          <Button
+            title="Generate Signal"
+            onPress={CheckSubscription}
+            disabled={!selectedPair}
+            color="#007BFF"
+          />
+        )}
+      </View>
+      <View style={styles.SignalBox}>
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.name}>Selected Pair: {selectedPair}</Text>
+          <Text style={styles.signal}>{signal.type}</Text>
+          <Text style={styles.signal}>{signal.price}</Text>
+          <Text style={styles.signal}>{signal.TP}</Text>
+          
+
+        </View>
       </View>
       <View style={styles.navigation}>
-                <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
-                    <Ionicons name="home" size={24} color="black" />
-                    <Text style={styles.iconText}>Home</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Signals')}>
-                    <Ionicons name="trending-up" size={24} color="black" />
-                    <Text style={styles.iconText}>Signals</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Profile')}>
-                    <Ionicons name="person" size={24} color="black" />
-                    <Text style={styles.iconText}>Profile</Text>
-                </TouchableOpacity>
-                {isLoggingOut ? (
-                    <ActivityIndicator size="large" color="#0000ff" />
-                ) : (
-                    <TouchableOpacity style={styles.iconContainer} onPress={handleLogOut}>
-                        <Ionicons name="log-out" size={24} color="black" />
-                        <Text style={styles.iconText}>Log Out</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+        <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={24} color="black" />
+          <Text style={styles.iconText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Signals')}>
+          <Ionicons name="trending-up" size={24} color="black" />
+          <Text style={styles.iconText}>Signals</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person" size={24} color="black" />
+          <Text style={styles.iconText}>Profile</Text>
+        </TouchableOpacity>
+       
+      </View>
+      <ErrorModal isOpen={isOpen} error={error} onClose={handleCloseError} />
+     
     </View>
   );
 };
@@ -139,6 +204,34 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
     width: '100%',
+  },
+  infoContainer: {
+    flex: 1,
+  },
+  SignalBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+    marginBottom: 20,
+    marginTop: 70,
+  },
+  signal:{
+    padding: 10,
+
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 10,
+
   },
   pickerItem: {
     height: 50,

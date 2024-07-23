@@ -1,36 +1,59 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import LottieView from "lottie-react-native";
+import { SIZES, FONTS } from '../../constants'
 
 const Profile = ({ navigation }) => {
-    const user = {
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        subscriptionPlan: 'Premium',
-        joinDate: 'January 1, 2020',
-    };
+
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [userData, setUserData] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogOut = useCallback(async () => {
         setIsLoggingOut(true);
-        const token = await SecureStore.getItemAsync('token');
         try {
-            const response = await axios.post('http://13.48.249.94:3001/auth/logOut', {
+            await SecureStore.deleteItemAsync('token');
+            setIsLoggingOut(false);
+            navigation.navigate("Login");
+        } catch (err) {
+            setIsLoggingOut(false);
+
+        }
+
+    }, []);
+
+
+    const Fetch = useCallback(async () => {
+        
+        const token = await SecureStore.getItemAsync('token');
+
+        try {
+            setIsLoading(true);
+            const response = await axios.post('http://13.48.249.94:3001/users/profile', {
                 token,
-            });
+            })
+
             if (response.status === 200) {
-                setIsLoggingOut(false);
-                await SecureStore.deleteItemAsync('token');
-                navigation.navigate("Login");
+                
+                setUserData(response.data);
+                setIsLoading(false);
+
+
             }
         } catch (err) {
-            setError("Log Out Failed. Please try again.");
-            setIsLoggingOut(false);
-            setIsOpen(true);
+            setIsLoading(false);
+
         }
+
     }, []);
+
+    useEffect(() => {
+        Fetch()
+
+    }, [Fetch])
 
     return (
         <View style={styles.container}>
@@ -40,26 +63,42 @@ const Profile = ({ navigation }) => {
                     style={styles.profilePicture}
                 />
                 <View style={styles.infoContainer}>
-                    <Text style={styles.name}>{user.name}</Text>
-                    <Text style={styles.email}>{user.email}</Text>
+                    <Text style={styles.name}>{userData.username}</Text>
+                    <Text style={styles.email}>{userData.email}</Text>
                     <Text style={styles.label}>Subscription Plan:</Text>
-                    <Text style={styles.value}>{user.subscriptionPlan}</Text>
+                    <Text style={styles.value}>{userData.plan}</Text>
                     <Text style={styles.label}>Member Since:</Text>
-                    <Text style={styles.value}>{user.joinDate}</Text>
+                    <Text style={styles.value}>{userData.joinDate}</Text>
                 </View>
             </View>
+            {isLoading && <ActivityIndicator size="large" color="#0000ff" />}
 
             <Text style={styles.appDescription}>
-            <Text style={styles.label}>ProfitPilot</Text> is your ultimate companion in financial trading, providing real-time signals and insights to optimize your trading decisions.{'\n\n'}
-                
-                <Text style={styles.label}>User-Friendly Interface:</Text>Enjoy a clean intuitive design that makes trading straightforward, even for beginners.{'\n\n'}
-                
-                <Text style={styles.label}>Data Protection:</Text>Your personal and trading account information is safeguarded with advanced encryption and security protocols.{'\n\n'}
-                
-                <Text style={styles.label}>Trading:</Text>With our AI trading capabilities, you will never go wrong. Advanced AI signal predictions and automated trading.{'\n\n'}
-                
-                For any enquiries, email:<Text style={styles.label}>profitpilot@proton.me</Text> 
+               
+                For any enquiries, email: <Text style={styles.label}>forex929@proton.me</Text>
             </Text>
+
+            <View
+                    style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexDirection: 'column',
+                        marginHorizontal: 22,
+                    }}
+                >
+                    <LottieView source={require("../../assets/animation.json")}
+                        autoPlay
+                        loop
+
+                        style={{
+                            width: SIZES.width * 0.8,
+                            height: SIZES.width * 0.9,
+                            marginVertical: 48,
+
+                        }}
+                    />
+                    </View>
 
             <View style={styles.navigation}>
                 <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>

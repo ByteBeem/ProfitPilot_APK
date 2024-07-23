@@ -56,7 +56,7 @@ export default function ChangePassword() {
     const handleSubmit = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await axios.post("http://192.168.62.1:3001/auth/changePassword", {
+            const response = await axios.post("http://13.48.249.94:3001/auth/changePassword", {
                 email: email,
                 serverToken: serverToken,
                 newPassword: form.password,

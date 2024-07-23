@@ -69,7 +69,7 @@ export default function Login() {
         setIsLoading(true);
         setIsButtonDisabled(true);
         try {
-            const response = await axios.post("http://192.168.62.1:3001/auth/login", {
+            const response = await axios.post("http://13.48.249.94:3001/auth/login", {
                 email: form.email,
                 password: form.password
             });

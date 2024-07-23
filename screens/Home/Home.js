@@ -6,6 +6,8 @@ import { Picker } from "@react-native-picker/picker";
 import axios from 'axios';
 import ErrorModal from '../../components/ErrorModal';
 import DisclaimerModal from "../../components/Disclaimer";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const Home = ({ navigation }) => {
     const [selectedBroker, setSelectedBroker] = useState('');
@@ -22,7 +24,6 @@ const Home = ({ navigation }) => {
     const [isOpenDisclaimer, setIsOpenDisclaimer] = useState(false);
     const [error, setError] = useState(null);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [brokerServers, setBrokerServers] = useState({});
     const [selectedPair, setSelectedPair] = useState('');
 
@@ -30,12 +31,14 @@ const Home = ({ navigation }) => {
         { label: 'EUR/USD', value: 'EUR/USD' },
         { label: 'GBP/USD', value: 'GBP/USD' },
         { label: 'USD/JPY', value: 'USD/JPY' },
-        { label: 'AUD/USD', value: 'AUD/USD' },
+        { label: 'XAU/USD', value: 'XAU/USD' },
         { label: 'USD/CAD', value: 'USD/CAD' },
         { label: 'USD/CHF', value: 'USD/CHF' },
     ];
 
     const fetchBrokerServers = async () => {
+        
+       
         try {
             setIsLoading(true);
             const response = await fetch('http://13.48.249.94:3001/trading/broker-servers');
@@ -51,9 +54,30 @@ const Home = ({ navigation }) => {
         }
     };
 
+   
+
     useEffect(() => {
-        fetchBrokerServers();
-    }, []);
+        const loadData = async () => {
+            try {
+                const isTrading = await AsyncStorage.getItem('trading');
+                const tradingStatus = await AsyncStorage.getItem('TradingStatus');
+                if (isTrading === "true" && tradingStatus === "In progress") {
+                   
+                   setIsButtonDisabled(false);
+                    setTrading(true);
+                    setTradingStatus(tradingStatus);
+                 
+                }
+                
+                fetchBrokerServers();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        };
+
+        loadData();
+        
+    }, [Trading]);
 
     useEffect(() => {
         setIsButtonDisabled(
@@ -85,37 +109,17 @@ const Home = ({ navigation }) => {
         setIsPasswordVisible(!isPasswordVisible);
     };
 
-    const handleLogOut = useCallback(async () => {
-        setIsLoggingOut(true);
-        const token = await SecureStore.getItemAsync('token');
-        try {
-
-            const response = await axios.post('http://13.48.249.94:3001/auth/logOut', {
-                token,
-            })
-            if (response.status === 200) {
-                setIsLoggingOut(false);
-
-                await SecureStore.deleteItemAsync('token');
-                navigation.navigate("Login");
-
-            }
-
-        } catch (err) {
-            setError("Log Out Failed. Please try again.");
-            setIsLoggingOut(false);
-            setIsOpen(true);
-        }
-
-    }, []);
     const handleSubmit = useCallback(async (token, account, server, password, selectedBroker, profit, selectedPair) => {
         setIsLoading(true);
-        setTradingStatus("Starting , please wait...");
+        
         try {
             if (Trading) {
+                setTradingStatus("Stopping , please wait...");
+                await AsyncStorage.clear();
                 await StopTrading();
                 return;
             } else {
+                setTradingStatus("Starting , please wait...");
                 const response = await axios.post("http://13.48.249.94:3001/trading/Start-trading", {
                     token,
                     login: account,
@@ -126,11 +130,16 @@ const Home = ({ navigation }) => {
                     selectedPair
                 });
 
-
                 if (response.status === 200) {
                     setTrading(true);
                     setTradingStatus("In progress")
+                    const status = 'In progress';
+                    const istrading = 'true';
+                    await AsyncStorage.setItem('TradingStatus' , status);
+                    await AsyncStorage.setItem('trading', istrading);
                     setIsLoading(false);
+                    
+            
                 }
             }
         } catch (error) {
@@ -156,6 +165,8 @@ const Home = ({ navigation }) => {
             setIsLoading(false);
         }
     }, [account, server, password, selectedBroker, Trading, profit]);
+
+  
 
     const StopTrading = useCallback(async () => {
         setIsLoading(true);
@@ -239,15 +250,17 @@ const Home = ({ navigation }) => {
                             }}
                         />
                     </View>
-
                 </View>
-
                 <View style={styles.blackScreen}>
                     <Text style={styles.pingText}>
                         {tradingStatus}
-                    </Text>
-                </View>
 
+                    </Text>
+                    {Trading && (
+                        <Text style={{ color: 'green', marginTop: 10 }}>AI has started trading for you</Text>
+                    )}
+                </View>
+                
                 <View >
                     <Picker
                         selectedValue={selectedBroker}
@@ -274,9 +287,10 @@ const Home = ({ navigation }) => {
                             ))}
                         </Picker>
                     </View>
-
+                    <View style={styles.formBox}>
                     {selectedBroker !== '' && (
                         <>
+                        
                             <View style={styles.passwordInputContainer}>
                                 <TextInput
                                     style={styles.input}
@@ -332,6 +346,7 @@ const Home = ({ navigation }) => {
                         </>
                     )}
                 </View>
+                </View>
 
                 <View style={styles.formAction}>
                     {isLoading ? (
@@ -347,9 +362,7 @@ const Home = ({ navigation }) => {
                         </TouchableOpacity>
                     )}
 
-                    {Trading && (
-                        <Text style={{ color: 'green', marginTop: 10 }}>AI has started trading for you</Text>
-                    )}
+
                 </View>
 
                 <View style={styles.navigation}>
@@ -365,14 +378,7 @@ const Home = ({ navigation }) => {
                         <Ionicons name="person" size={24} color="black" />
                         <Text style={styles.iconText}>Profile</Text>
                     </TouchableOpacity>
-                    {isLoggingOut ? (
-                        <ActivityIndicator size="large" color="#0000ff" />
-                    ) : (
-                        <TouchableOpacity style={styles.iconContainer} onPress={handleLogOut}>
-                            <Ionicons name="log-out" size={24} color="black" />
-                            <Text style={styles.iconText}>Log Out</Text>
-                        </TouchableOpacity>
-                    )}
+
                 </View>
 
                 <ErrorModal isOpen={isOpen} error={error} onClose={handleCloseError} />
@@ -426,11 +432,25 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 
+    formBox: {
+        alignItems: 'center',
+        backgroundColor: '#ffffff',
+        padding: 20,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 5,
+        marginBottom: 10,
+       
+    },
+
     picker: {
         height: 50,
         width: '100%',
         backgroundColor: '#fff',
-        marginBottom: 20,
+        marginBottom: 10,
         borderRadius: 5,
         borderWidth: 4,
     },
@@ -478,7 +498,7 @@ const styles = StyleSheet.create({
     disabledBtn: {
         backgroundColor: '#888',
     },
-   
+
     navigation: {
         position: 'absolute',
         bottom: 0,

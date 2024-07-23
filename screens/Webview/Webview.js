@@ -49,7 +49,7 @@ const WebViewScreen = ({ navigation, route }) => {
             )}
 
             <View style={styles.buttonContainer}>
-                <Button title="Back to App" onPress={() => navigation.goBack()} />
+                <Button title="Back to App" onPress={() => navigation.navigate('Home')} />
             </View>
         </View>
     );

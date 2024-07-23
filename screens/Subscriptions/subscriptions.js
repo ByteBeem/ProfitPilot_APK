@@ -21,7 +21,7 @@ const Subscriptions = ({ navigation }) => {
         '2': false,
         '3': false,
     });
-    const [location, setLocation] = useState('');
+    const [location, setLocation] = useState('USA');
     const [plans, setPlans] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isButtonDisabled, setIsButtonDisabled] = useState(false);
@@ -40,7 +40,7 @@ const Subscriptions = ({ navigation }) => {
             const response = await axios.post('http://13.48.249.94:3001/subscriptions/plans', { token });
             if (response.status === 200) {
                 let fetchedPlans = response.data.plans;
-                if (countryCode !== 'ZA') {
+                if (countryCode === 'ZA') {
                     fetchedPlans = fetchedPlans.map((plan) => ({
                         ...plan,
                         price: convertToDollar(plan.price),
@@ -71,7 +71,7 @@ const Subscriptions = ({ navigation }) => {
 
             if (reverseGeocode.length > 0) {
                 const countryCode = reverseGeocode[0].isoCountryCode;
-                 setLocation(countryCode);
+                 //setLocation(countryCode);
                 fetchPlans(countryCode);
                
             }

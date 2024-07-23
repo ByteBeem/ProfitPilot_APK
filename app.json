@@ -1,15 +1,15 @@
 {
   "expo": {
     "name": "ProfitPilot",
-    "slug": "Trading",
+    "slug": "profitpilot",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.jpeg",
+    "icon": "./assets/splash.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/logo.jpeg",
+      "image": "./assets/splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "black"
+       "backgroundColor": "#FFFFFF"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -19,21 +19,22 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.jpeg",
+        "foregroundImage": "./assets/splash.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.bytebeem.App"
     },
     "web": {
-      "favicon": "./assets/logo.jpeg"
+      "favicon": "./assets/splash.png"
     },
     "extra": {
       "eas": {
-        "projectId": "00c13ae2-92ff-4da9-a0ec-cf670ad7099f"
+        "projectId": "4efca0c2-d483-4c04-9d9a-e43c4997eb80"
       }
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "owner": "themxolisi"
   }
 }

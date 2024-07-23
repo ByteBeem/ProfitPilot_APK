@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, Image, TextInput, ActivityIndicator, TouchableOpacity } from "react-native";
+import { SafeAreaView, View, Text, StyleSheet, Image, TextInput, ActivityIndicator,ScrollView ,Platform, KeyboardAvoidingView,TouchableOpacity } from "react-native";
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -9,11 +9,13 @@ const Signup = () => {
     const [form, setForm] = useState({
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        username: ''
     });
     const [passwordMatchError, setPasswordMatchError] = useState('');
     const [passwordStrengthError, setPasswordStrengthError] = useState('');
     const [emailError, setEmailError] = useState('');
+    const [usernameError , setUsernameError] =useState('');
     const [isButtonDisabled, setIsButtonDisabled] = useState(true);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -25,9 +27,10 @@ const Signup = () => {
             !!passwordStrengthError ||
             !form.email ||
             !form.password ||
-            !form.confirmPassword
+            !form.confirmPassword ||
+            !form.username
         );
-    }, [emailError, passwordMatchError, passwordStrengthError, form.email, form.password, form.confirmPassword]);
+    }, [emailError,form.username, passwordMatchError, passwordStrengthError, form.email, form.password, form.confirmPassword]);
 
     const handleEmailChange = useCallback((email) => {
         setForm(prevForm => ({ ...prevForm, email }));
@@ -37,6 +40,20 @@ const Signup = () => {
             setEmailError('');
         }
     }, [validateEmail]);
+
+    const handleUsernameChange = useCallback((username) => {
+        setForm(prevForm => ({ ...prevForm, username }));
+        if (!validateUsername(username)) {
+            setUsernameError('Invalid username format');
+        } else {
+            setUsernameError('');
+        }
+    }, [validateUsername]);
+
+    function validateUsername(username) {
+        const usernameRegex = /^[a-zA-Z0-9_]{4,16}$/;
+        return usernameRegex.test(username);
+    }
 
     const togglePasswordVisibility = () => {
         setIsPasswordVisible(!isPasswordVisible);
@@ -54,16 +71,15 @@ const Signup = () => {
         } else {
             setPasswordMatchError('');
         }
-
         if (!validatePasswordStrength(password)) {
-            setPasswordStrengthError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character');
+            setPasswordStrengthError('Password must be 8 characters long.');
         } else {
             setPasswordStrengthError('');
         }
     }, [form.confirmPassword, validatePasswordStrength]);
 
     const validatePasswordStrength = useCallback((password) => {
-        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/;
+        const regex = /^.{8,}$/;
         return regex.test(password);
     }, []);
 
@@ -80,9 +96,10 @@ const Signup = () => {
         setIsLoading(true);
         setIsButtonDisabled(true);
         try {
-            const response = await axios.post("http://192.168.62.1:3001/auth/signup", {
+            const response = await axios.post("http://13.48.249.94:3001/auth/signup", {
                 email: form.email,
-                password: form.password
+                password: form.password,
+                username:form.username
             });
             if (response.status === 200) {
                 setIsLoading(false);
@@ -105,93 +122,114 @@ const Signup = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <View style={styles.imageContainer}>
-                    <Image
-                        source={require("../../assets/logo.jpeg")}
-                        alt="logo"
-                        style={styles.logo}
-                    />
-                </View>
-                <Text style={styles.title}>Sign up to ProfitPilot</Text>
-                <Text style={styles.subtitle}>Create your ProfitPilot account</Text>
-            </View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.container}
+            >
+                <ScrollView showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollView}>
+                    <View style={styles.header}>
+                        <View style={styles.imageContainer}>
+                            <Image
+                                source={require("../../assets/logo.jpeg")}
+                                alt="logo"
+                                style={styles.logo}
+                            />
+                        </View>
+                        <Text style={styles.title}>Sign up to ProfitPilot</Text>
+                        <Text style={styles.subtitle}>Create your ProfitPilot account</Text>
+                    </View>
 
-            <View style={styles.form}>
-                <View style={styles.input}>
-                    <Text style={styles.inputLabel}>Email address</Text>
-                    <TextInput
-                        autoCapitalize='none'
-                        keyboardType='email-address'
-                        autoCorrect={false}
-                        style={[styles.inputControl, emailError && styles.inputError]}
-                        placeholder='Email'
-                        placeholderTextColor="#6b7280"
-                        value={form.email}
-                        onChangeText={handleEmailChange}
-                        editable={!isLoading}
-                    />
-                </View>
-                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                    <View style={styles.form}>
+                        <View style={styles.input}>
+                            <Text style={styles.inputLabel}>Username</Text>
+                            <TextInput
+                                autoCapitalize='none'
+                                keyboardType='email-address'
+                                autoCorrect={false}
+                                style={[styles.inputControl, usernameError && styles.inputError]}
+                                placeholder='Username'
+                                placeholderTextColor="#6b7280"
+                                value={form.username}
+                                onChangeText={handleUsernameChange}
+                                editable={!isLoading}
+                            />
+                        </View>
+                        {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
+                        <View style={styles.input}>
+                            <Text style={styles.inputLabel}>Email address</Text>
+                            <TextInput
+                                autoCapitalize='none'
+                                keyboardType='email-address'
+                                autoCorrect={false}
+                                style={[styles.inputControl, emailError && styles.inputError]}
+                                placeholder='Email'
+                                placeholderTextColor="#6b7280"
+                                value={form.email}
+                                onChangeText={handleEmailChange}
+                                editable={!isLoading}
+                            />
+                        </View>
+                        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-                <View style={styles.input}>
-                    <Text style={styles.inputLabel}>Password</Text>
-                    <View style={[styles.passwordInputContainer, (passwordMatchError || passwordStrengthError) ? styles.inputError : null]}>
-                        <TextInput
-                            secureTextEntry={!isPasswordVisible}
-                            style={[styles.inputControl, styles.passwordInput]}
-                            placeholder='**********'
-                            placeholderTextColor="#6b7280"
-                            value={form.password}
-                            onChangeText={handlePasswordChange}
-                            editable={!isLoading}
-                        />
-                        <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIcon}>
-                            <MaterialCommunityIcons name={isPasswordVisible ? 'eye-off' : 'eye'} size={24} color="#6b7280" />
+                        <View style={styles.input}>
+                            <Text style={styles.inputLabel}>Password</Text>
+                            <View style={[styles.passwordInputContainer, (passwordMatchError || passwordStrengthError) ? styles.inputError : null]}>
+                                <TextInput
+                                    secureTextEntry={!isPasswordVisible}
+                                    style={[styles.inputControl, styles.passwordInput]}
+                                    placeholder='**********'
+                                    placeholderTextColor="#6b7280"
+                                    value={form.password}
+                                    onChangeText={handlePasswordChange}
+                                    editable={!isLoading}
+                                />
+                                <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIcon}>
+                                    <MaterialCommunityIcons name={isPasswordVisible ? 'eye-off' : 'eye'} size={24} color="#6b7280" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        {passwordMatchError || passwordStrengthError ? <Text style={styles.errorText}>{passwordMatchError || passwordStrengthError}</Text> : null}
+
+                        <View style={styles.input}>
+                            <Text style={styles.inputLabel}>Retype password</Text>
+                            <TextInput
+                                secureTextEntry
+                                style={[styles.inputControl, passwordMatchError ? styles.inputError : null]}
+                                placeholder='**********'
+                                placeholderTextColor="#6b7280"
+                                value={form.confirmPassword}
+                                onChangeText={handleConfirmPasswordChange}
+                                editable={!isLoading}
+                            />
+                        </View>
+                        {passwordMatchError ? <Text style={styles.errorText}>{passwordMatchError}</Text> : null}
+
+                        <View style={styles.formAction}>
+                            {isLoading ? (
+                                <ActivityIndicator size="large" color="#0000ff" />
+                            ) : (
+                                <TouchableOpacity
+                                    onPress={handleSubmit}
+                                    disabled={isButtonDisabled}
+                                >
+                                    <View style={[styles.btn, isButtonDisabled && styles.disabledBtn]}>
+                                        <Text style={styles.btnText}>Create account</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.formFooter}>Already have an account? {' '}
+                                <Text style={{ textDecorationLine: 'underline' }}>Log in</Text>
+                            </Text>
                         </TouchableOpacity>
                     </View>
-                </View>
-                {passwordMatchError || passwordStrengthError ? <Text style={styles.errorText}>{passwordMatchError || passwordStrengthError}</Text> : null}
-
-                <View style={styles.input}>
-                    <Text style={styles.inputLabel}>Retype password</Text>
-                    <TextInput
-                        secureTextEntry
-                        style={[styles.inputControl, passwordMatchError ? styles.inputError : null]}
-                        placeholder='**********'
-                        placeholderTextColor="#6b7280"
-                        value={form.confirmPassword}
-                        onChangeText={handleConfirmPasswordChange}
-                        editable={!isLoading}
-                    />
-                </View>
-                {passwordMatchError ? <Text style={styles.errorText}>{passwordMatchError}</Text> : null}
-
-                <View style={styles.formAction}>
-                    {isLoading ? (
-                        <ActivityIndicator size="large" color="#0000ff" />
-                    ) : (
-                        <TouchableOpacity
-                            onPress={handleSubmit}
-                            disabled={isButtonDisabled}
-                        >
-                            <View style={[styles.btn, isButtonDisabled && styles.disabledBtn]}>
-                                <Text style={styles.btnText}>Create account</Text>
-                            </View>
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                    <Text style={styles.formFooter}>Already have an account? {' '}
-                        <Text style={{ textDecorationLine: 'underline' }}>Log in</Text>
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
