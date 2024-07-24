@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ProfitPilot",
-    "slug": "profitpilot",
+    "slug": "profitpilot-hur7k-77a8ok77w91wxf",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/splash.png",
@@ -29,12 +29,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "6a271932-7efe-4964-b5ea-7ee67ba7fd75"
+        "projectId": "1d1556dc-8909-4a72-b7eb-6eabf31fffd7"
       }
     },
     "plugins": [
       "expo-secure-store"
     ],
-    "owner": "bytebeem21"
+    "owner": "themxolisi"
   }
 }
