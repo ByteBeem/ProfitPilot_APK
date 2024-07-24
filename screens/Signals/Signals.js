@@ -17,8 +17,7 @@ const forexPairs = [
 
 const Signals = ({ navigation }) => {
   const [selectedPair, setSelectedPair] = useState('');
- 
-  const [signal, setSignal] = useState('');
+  const [signal, setSignal] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -28,121 +27,95 @@ const Signals = ({ navigation }) => {
     setError(null);
   };
 
-  const handleGenerate = useCallback(async (token , selectedPair) => {
-   
+  const fetchSignal = useCallback(async (token, pair) => {
     try {
-
-      const response = await axios.post('http://13.48.249.94:3001/trading/signals', {
-        token: token,
-        pair: selectedPair
-
-      })
-      if (response.status === 200) {
-        setSignal(response.data.signal);
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setError(error.response.data.error);
-        setIsOpen(true);
-      }
-      else if (error.response && error.response.status === 403) {
-        setError(error.response.data.error);
-        setIsOpen(true);
-      } else if (error.request) {
-        setError("Something went wrong on our side.");
-        setIsOpen(true);
-      } else {
-        setError('An error occurred. Please try again.');
-        setIsOpen(true);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-
-  }, []);
-
-  const CheckSubscription = useCallback(async () => {
-  
-    setIsLoading(true);
-    setSignal('');
-    const token = await SecureStore.getItemAsync('token');
-    try {
-      const response = await axios.post("http://13.48.249.94:3001/subscriptions/check-subscription", {
+      const { data, status } = await axios.post('https://profitpilot.ddns.net/trading/signals', {
         token,
+        pair,
       });
 
-     
-      if (response.status === 200) {
-
-        await handleGenerate(token , selectedPair);
-        return;
+      if (status === 200) {
+        setSignal(data.signal);
       }
     } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setError(error.response.data.error);
-        setIsOpen(true);
-      }
-      else if (error.response && error.response.status === 403) {
-        setError(error.response.data.error);
-        setIsOpen(true);
-      } else if (error.request) {
-        setError("Something went wrong on our side.");
-        setIsOpen(true);
-      } else {
-        setError('An error occurred. Please try again.');
-        setIsOpen(true);
-      }
+      handleError(error);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPair]);
+  }, []);
+
+  const checkSubscription = useCallback(async () => {
+    setIsLoading(true);
+    setSignal(null);
+
+    const token = await SecureStore.getItemAsync('token');
+    try {
+      const { status } = await axios.post('https://profitpilot.ddns.net/subscriptions/check-subscription', { token });
+
+      if (status === 200) {
+        await fetchSignal(token, selectedPair);
+      }
+    } catch (error) {
+      handleError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedPair, fetchSignal]);
+
+  const handleError = (error) => {
+    if (error.response) {
+      const message = error.response.data.error || 'An error occurred. Please try again.';
+      setError(message);
+    } else if (error.request) {
+      setError('Network error. Please check your connection.');
+    } else {
+      setError('An unexpected error occurred.');
+    }
+    setIsOpen(true);
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../../assets/logo.jpeg')}
-            style={styles.logo}
-          />
-        </View>
+        <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
       </View>
       <Text style={styles.label}>Select Forex Pair:</Text>
       <View style={styles.pickerContainer}>
         <Picker
           selectedValue={selectedPair}
-          onValueChange={(itemValue) => setSelectedPair(itemValue)}
+          onValueChange={setSelectedPair}
           style={styles.picker}
           itemStyle={styles.pickerItem}
         >
           <Picker.Item label="Select a pair..." value="" />
-          {forexPairs.map((pair) => (
+          {forexPairs.map(pair => (
             <Picker.Item key={pair.value} label={pair.label} value={pair.value} />
           ))}
         </Picker>
       </View>
       <View style={styles.buttonContainer}>
         {isLoading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color="#007BFF" />
         ) : (
           <Button
             title="Generate Signal"
-            onPress={CheckSubscription}
+            onPress={checkSubscription}
             disabled={!selectedPair}
             color="#007BFF"
           />
         )}
       </View>
-      <View style={styles.SignalBox}>
-
-        <View style={styles.infoContainer}>
-          <Text style={styles.name}>Selected Pair: {selectedPair}</Text>
-          <Text style={styles.signal}>{signal.type}</Text>
-          <Text style={styles.signal}>{signal.price}</Text>
-          <Text style={styles.signal}>{signal.TP}</Text>
-          
-
-        </View>
+      <View style={styles.signalBox}>
+        {signal ? (
+          <View style={styles.infoContainer}>
+            <Text style={styles.name}>Selected Pair: {selectedPair}</Text>
+            <Text style={styles.signal}>Type: {signal.type}</Text>
+            <Text style={styles.signal}>Price: {signal.price}</Text>
+            <Text style={styles.signal}>TP: {signal.TP}</Text>
+          </View>
+        ) : (
+          <Text style={styles.noSignal}>Press Genearte Signals.</Text>
+        )}
       </View>
       <View style={styles.navigation}>
         <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
@@ -157,10 +130,8 @@ const Signals = ({ navigation }) => {
           <Ionicons name="person" size={24} color="black" />
           <Text style={styles.iconText}>Profile</Text>
         </TouchableOpacity>
-       
       </View>
       <ErrorModal isOpen={isOpen} error={error} onClose={handleCloseError} />
-     
     </View>
   );
 };
@@ -181,16 +152,10 @@ const styles = StyleSheet.create({
     marginVertical: 36,
     alignItems: 'center',
   },
-  logoContainer: {
+  logo: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  logo: {
-    width: '100%',
-    height: '100%',
   },
   pickerContainer: {
     width: '100%',
@@ -205,10 +170,14 @@ const styles = StyleSheet.create({
     height: 50,
     width: '100%',
   },
-  infoContainer: {
-    flex: 1,
+  pickerItem: {
+    height: 50,
+    fontSize: 16,
   },
-  SignalBox: {
+  buttonContainer: {
+    width: '100%',
+  },
+  signalBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
@@ -222,23 +191,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 70,
   },
-  signal:{
+  infoContainer: {
+    flex: 1,
+  },
+  signal: {
     padding: 10,
-
   },
   name: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 10,
-
   },
-  pickerItem: {
-    height: 50,
-    fontSize: 16,
-  },
-  buttonContainer: {
-    width: '100%',
+  noSignal: {
+    fontSize: 18,
+    color: '#333',
   },
   navigation: {
     position: 'absolute',

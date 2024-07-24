@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "cover",
-       "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#FFFFFF"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -29,12 +29,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "4efca0c2-d483-4c04-9d9a-e43c4997eb80"
+        "projectId": "6a271932-7efe-4964-b5ea-7ee67ba7fd75"
       }
     },
     "plugins": [
       "expo-secure-store"
     ],
-    "owner": "themxolisi"
+    "owner": "bytebeem21"
   }
 }

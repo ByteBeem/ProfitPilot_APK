@@ -96,7 +96,7 @@ const Signup = () => {
         setIsLoading(true);
         setIsButtonDisabled(true);
         try {
-            const response = await axios.post("http://13.48.249.94:3001/auth/signup", {
+            const response = await axios.post("https://profitpilot.ddns.net/auth/signup", {
                 email: form.email,
                 password: form.password,
                 username:form.username

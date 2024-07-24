@@ -4,10 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import LottieView from "lottie-react-native";
-import { SIZES, FONTS } from '../../constants'
+import { SIZES } from '../../constants';
 
 const Profile = ({ navigation }) => {
-
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [userData, setUserData] = useState({});
     const [isLoading, setIsLoading] = useState(false);
@@ -16,44 +15,35 @@ const Profile = ({ navigation }) => {
         setIsLoggingOut(true);
         try {
             await SecureStore.deleteItemAsync('token');
-            setIsLoggingOut(false);
             navigation.navigate("Login");
         } catch (err) {
+           
+        } finally {
             setIsLoggingOut(false);
-
         }
+    }, [navigation]);
 
-    }, []);
-
-
-    const Fetch = useCallback(async () => {
-        
+    const fetchUserData = useCallback(async () => {
         const token = await SecureStore.getItemAsync('token');
+        if (!token) return;
 
+        setIsLoading(true);
         try {
-            setIsLoading(true);
-            const response = await axios.post('http://13.48.249.94:3001/users/profile', {
-                token,
-            })
+            const response = await axios.post('https://profitpilot.ddns.net/users/profile', { token });
 
             if (response.status === 200) {
-                
                 setUserData(response.data);
-                setIsLoading(false);
-
-
             }
         } catch (err) {
+            
+        } finally {
             setIsLoading(false);
-
         }
-
     }, []);
 
     useEffect(() => {
-        Fetch()
-
-    }, [Fetch])
+        fetchUserData();
+    }, [fetchUserData]);
 
     return (
         <View style={styles.container}>
@@ -71,34 +61,21 @@ const Profile = ({ navigation }) => {
                     <Text style={styles.value}>{userData.joinDate}</Text>
                 </View>
             </View>
+
             {isLoading && <ActivityIndicator size="large" color="#0000ff" />}
 
             <Text style={styles.appDescription}>
-               
                 For any enquiries, email: <Text style={styles.label}>forex929@proton.me</Text>
             </Text>
 
-            <View
-                    style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexDirection: 'column',
-                        marginHorizontal: 22,
-                    }}
-                >
-                    <LottieView source={require("../../assets/animation.json")}
-                        autoPlay
-                        loop
-
-                        style={{
-                            width: SIZES.width * 0.8,
-                            height: SIZES.width * 0.9,
-                            marginVertical: 48,
-
-                        }}
-                    />
-                    </View>
+            <View style={styles.animationContainer}>
+                <LottieView
+                    source={require("../../assets/animation.json")}
+                    autoPlay
+                    loop
+                    style={styles.animation}
+                />
+            </View>
 
             <View style={styles.navigation}>
                 <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
@@ -158,8 +135,8 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 5,
         color: '#333',
+        marginBottom: 5,
     },
     email: {
         fontSize: 16,
@@ -183,6 +160,17 @@ const styles = StyleSheet.create({
         marginTop: 20,
         textAlign: 'left',
         lineHeight: 22,
+    },
+    animationContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: 22,
+        marginVertical: 48,
+    },
+    animation: {
+        width: SIZES.width * 0.8,
+        height: SIZES.width * 0.9,
     },
     navigation: {
         position: 'absolute',

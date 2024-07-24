@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ErrorModal from '../../components/ErrorModal';
 import axios from 'axios';
-import * as Securestore from 'expo-secure-store';
+import * as SecureStore from 'expo-secure-store';
 
 export default function Verify() {
     const route = useRoute();
@@ -13,82 +13,58 @@ export default function Verify() {
     const navigation = useNavigation();
     const [error, setError] = useState(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [form, setForm] = useState({
-        code: '',
-    });
-
+    const [form, setForm] = useState({ code: '' });
     const [isButtonDisabled, setIsButtonDisabled] = useState(true);
     const inputs = useRef([]);
 
-    const handleCloseError = () => {
-        setIsOpen(false);
-        setError(null);
-    };
-
     useEffect(() => {
-        setIsButtonDisabled(
-            form.code.length !== 5
-        );
+        setIsButtonDisabled(form.code.length !== 5);
     }, [form.code]);
 
     useEffect(() => {
-        const unsubscribe = navigation.addListener('blur', () => {
-            setForm({ code: '' });
-        });
-
+        const unsubscribe = navigation.addListener('blur', () => setForm({ code: '' }));
         return unsubscribe;
     }, [navigation]);
 
     const handleSubmit = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await axios.post("http://13.48.249.94:3001/auth/confirm-otp", 
-                {
-                    email: email,
-                    code: form.code,
-                    type,
-                }
-            )
+            const response = await axios.post("https://profitpilot.ddns.net/auth/confirm-otp", {
+                email,
+                code: form.code,
+                type,
+            });
+
             if (response.status === 200) {
-                setIsLoading(false);
                 if (type === 'signup') {
-                    await Securestore.setItemAsync('token' , response.data.token);
+                    await SecureStore.setItemAsync('token', response.data.token);
                     navigation.navigate('Home');
                 } else if (type === 'reset') {
-                    navigation.navigate('Change', { email: email , serverToken: response.data.token});
+                    navigation.navigate('Change', { email, serverToken: response.data.token });
                 }
             }
-
-        }  catch (error) {
-            if (error.response) {
-                if (error.response.status === 404) {
-                    setError(error.response.data.error);
-                    setIsOpen(true);
-                } else if (error.response.status === 401) {
-                    setError(error.response.data.error);
-                    setIsOpen(true);
-                } else {
-                    setError('An error occurred. Please try again.');
-                    setIsOpen(true);
-                }
-            } else if (error.request) {
-                setError('Network error. Please check your connection.');
-                setIsOpen(true);
-            } else {
-                setError('An unexpected error occurred. Please try again.');
-                setIsOpen(true);
-            }
+        } catch (error) {
+            handleError(error);
         } finally {
             setIsLoading(false);
-            setIsButtonDisabled(false);
         }
     }, [form.code, navigation, type]);
+
+    const handleError = (error) => {
+        if (error.response) {
+            setError(error.response.data.error || 'An error occurred. Please try again.');
+        } else if (error.request) {
+            setError('Network error. Please check your connection.');
+        } else {
+            setError('An unexpected error occurred. Please try again.');
+        }
+        setIsOpen(true);
+    };
 
     const handleTextInputChange = (text, index) => {
         if (/^[0-9]$/.test(text) && index < 5) {
             setForm(prevForm => {
                 const updatedCode = prevForm.code.substring(0, index) + text + prevForm.code.substring(index + 1);
-
                 if (text.length === 1 && index < inputs.current.length - 1) {
                     inputs.current[index + 1].focus();
                 }
@@ -119,11 +95,7 @@ export default function Verify() {
                 </TouchableOpacity>
                 <View style={styles.header}>
                     <View style={styles.imageContainer}>
-                        <Image
-                            source={require("../../assets/logo.jpeg")}
-                            alt="logo"
-                            style={styles.logo}
-                        />
+                        <Image source={require("../../assets/logo.jpeg")} alt="logo" style={styles.logo} />
                     </View>
                     <Text style={styles.title}>Verify your Email</Text>
                     <Text style={styles.subtitle}>Enter the code sent to {email}</Text>
@@ -154,10 +126,7 @@ export default function Verify() {
                         {isLoading ? (
                             <ActivityIndicator size="large" color="#0000ff" />
                         ) : (
-                            <TouchableOpacity
-                                onPress={handleSubmit}
-                                disabled={isButtonDisabled}
-                            >
+                            <TouchableOpacity onPress={handleSubmit} disabled={isButtonDisabled}>
                                 <View style={[styles.btn, isButtonDisabled && styles.disabledBtn]}>
                                     <Text style={styles.btnText}>Verify</Text>
                                 </View>
@@ -165,7 +134,7 @@ export default function Verify() {
                         )}
                     </View>
                 </View>
-                <ErrorModal isOpen={isOpen} error={error} onClose={handleCloseError} />
+                <ErrorModal isOpen={isOpen} error={error} onClose={() => setIsOpen(false)} />
             </View>
         </SafeAreaView>
     );

@@ -20,7 +20,7 @@ const Walkthrough = () => {
             const version = Constants.expoConfig.version;
             setAppVersion(version);
             
-            const response = await axios.get('http://13.48.249.94:3001/users/check-update', {
+            const response = await axios.get('https://profitpilot.ddns.net/users/check-update', {
                 params: { version }
             });
             if (response.status !== 200) {

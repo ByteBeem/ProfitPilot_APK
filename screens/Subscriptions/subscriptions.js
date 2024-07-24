@@ -37,10 +37,10 @@ const Subscriptions = ({ navigation }) => {
         const token = await SecureStore.getItemAsync('token');
 
         try {
-            const response = await axios.post('http://13.48.249.94:3001/subscriptions/plans', { token });
+            const response = await axios.post('https://profitpilot.ddns.net/subscriptions/plans', { token });
             if (response.status === 200) {
                 let fetchedPlans = response.data.plans;
-                if (countryCode === 'ZA') {
+                if (countryCode !== 'ZA') {
                     fetchedPlans = fetchedPlans.map((plan) => ({
                         ...plan,
                         price: convertToDollar(plan.price),
@@ -71,7 +71,7 @@ const Subscriptions = ({ navigation }) => {
 
             if (reverseGeocode.length > 0) {
                 const countryCode = reverseGeocode[0].isoCountryCode;
-                 //setLocation(countryCode);
+                 setLocation(countryCode);
                 fetchPlans(countryCode);
                
             }
@@ -88,7 +88,7 @@ const Subscriptions = ({ navigation }) => {
             
             try {
                 const response = await axios.post(
-                    'http://13.48.249.94:3001/subscriptions/create-payment',
+                    'https://profitpilot.ddns.net/subscriptions/create-payment',
                     { planId, token, location }
                 );
 

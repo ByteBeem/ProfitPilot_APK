@@ -8,7 +8,6 @@ import ErrorModal from '../../components/ErrorModal';
 import DisclaimerModal from "../../components/Disclaimer";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
 const Home = ({ navigation }) => {
     const [selectedBroker, setSelectedBroker] = useState('');
     const [account, setAccount] = useState('');
@@ -18,57 +17,41 @@ const Home = ({ navigation }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isButtonDisabled, setIsButtonDisabled] = useState(true);
     const [serverOptions, setServerOptions] = useState([]);
-    const [Trading, setTrading] = useState(false);
+    const [trading, setTrading] = useState(false);
     const [tradingStatus, setTradingStatus] = useState('Not Started');
     const [isOpen, setIsOpen] = useState(false);
     const [isOpenDisclaimer, setIsOpenDisclaimer] = useState(false);
     const [error, setError] = useState(null);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [brokerServers, setBrokerServers] = useState({});
-    const [selectedPair, setSelectedPair] = useState('');
+    
 
-    const forexPairs = [
-        { label: 'EUR/USD', value: 'EUR/USD' },
-        { label: 'GBP/USD', value: 'GBP/USD' },
-        { label: 'USD/JPY', value: 'USD/JPY' },
-        { label: 'XAU/USD', value: 'XAU/USD' },
-        { label: 'USD/CAD', value: 'USD/CAD' },
-        { label: 'USD/CHF', value: 'USD/CHF' },
-    ];
-
-    const fetchBrokerServers = async () => {
-        
-       
+    // Fetch broker servers
+    const fetchBrokerServers = useCallback(async () => {
+        setIsLoading(true);
         try {
-            setIsLoading(true);
-            const response = await fetch('http://13.48.249.94:3001/trading/broker-servers');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
+            const response = await fetch('https://profitpilot.ddns.net/trading/broker-servers');
+            if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
             setBrokerServers(data);
-            setIsLoading(false);
         } catch (error) {
-            setError('Failed to fetch broker servers');
+            handleError('Failed to fetch broker servers');
+        } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-   
-
+    // Load initial data
     useEffect(() => {
         const loadData = async () => {
             try {
                 const isTrading = await AsyncStorage.getItem('trading');
                 const tradingStatus = await AsyncStorage.getItem('TradingStatus');
                 if (isTrading === "true" && tradingStatus === "In progress") {
-                   
-                   setIsButtonDisabled(false);
                     setTrading(true);
                     setTradingStatus(tradingStatus);
-                 
+                    setIsButtonDisabled(false);
                 }
-                
                 fetchBrokerServers();
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -76,296 +59,201 @@ const Home = ({ navigation }) => {
         };
 
         loadData();
-        
-    }, [Trading]);
+    }, [fetchBrokerServers]);
 
+    // Update button state
     useEffect(() => {
         setIsButtonDisabled(
             !account ||
             !selectedBroker ||
             !password ||
             !server ||
-            !profit ||
-            !selectedPair
+            !profit 
+           
         );
-    }, [selectedBroker, selectedPair, account, password, server, profit]);
+    }, [selectedBroker, account, password, server, profit]);
 
+    // Handle broker change
     const handleBrokerChange = (value) => {
         setSelectedBroker(value);
         setServer('');
-        setServerOptions(brokerServers[value]);
+        setServerOptions(brokerServers[value] || []);
     };
 
-    const handleCloseError = () => {
-        setIsOpen(false);
-        setError(null);
-    };
+    // Close error modal
+    const handleCloseError = () => setIsOpen(false);
 
-    const handleCloseDisclaimer = () => {
-        setIsOpenDisclaimer(false);
-    };
+    // Close disclaimer modal
+    const handleCloseDisclaimer = () => setIsOpenDisclaimer(false);
 
-    const togglePasswordVisibility = () => {
-        setIsPasswordVisible(!isPasswordVisible);
-    };
+    // Toggle password visibility
+    const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
 
-    const handleSubmit = useCallback(async (token, account, server, password, selectedBroker, profit, selectedPair) => {
+    // Handle form submission
+    const handleSubmit = useCallback(async () => {
         setIsLoading(true);
-        
         try {
-            if (Trading) {
-                setTradingStatus("Stopping , please wait...");
+            const token = await SecureStore.getItemAsync('token');
+            if (trading) {
+                setTradingStatus("Stopping, please wait...");
                 await AsyncStorage.clear();
                 await StopTrading();
-                return;
             } else {
-                setTradingStatus("Starting , please wait...");
-                const response = await axios.post("http://13.48.249.94:3001/trading/Start-trading", {
+                setTradingStatus("Starting, please wait...");
+                const response = await axios.post("https://profitpilot.ddns.net/trading/Start-trading", {
                     token,
                     login: account,
                     selectedBroker,
                     serverName: server,
                     password,
-                    profit,
-                    selectedPair
+                    profit
+                   
                 });
-
                 if (response.status === 200) {
                     setTrading(true);
-                    setTradingStatus("In progress")
-                    const status = 'In progress';
-                    const istrading = 'true';
-                    await AsyncStorage.setItem('TradingStatus' , status);
-                    await AsyncStorage.setItem('trading', istrading);
-                    setIsLoading(false);
-                    
-            
+                    setTradingStatus("In progress");
+                    await AsyncStorage.setItem('TradingStatus', 'In progress');
+                    await AsyncStorage.setItem('trading', 'true');
                 }
             }
         } catch (error) {
-            if (error.response && error.response.status === 404) {
-                setError(error.response.data.error);
-                setIsOpen(true);
-                setTradingStatus("Failed to start");
-            }
-            else if (error.response && error.response.status === 401) {
-                setError(error.response.data.error);
-                setIsOpen(true);
-                setTradingStatus("Failed to start");
-            } else if (error.request) {
-                setError("Something went wrong on our side.");
-                setIsOpen(true);
-                setTradingStatus("Failed to start");
-            } else {
-                setError('An error occurred. Please try again.');
-                setIsOpen(true);
-                setTradingStatus("Failed to start");
-            }
+            handleError('Failed to start trading');
         } finally {
             setIsLoading(false);
         }
-    }, [account, server, password, selectedBroker, Trading, profit]);
+    }, [account, server, password, selectedBroker, trading, profit]);
 
-  
-
+    // Stop trading
     const StopTrading = useCallback(async () => {
         setIsLoading(true);
         const token = await SecureStore.getItemAsync('token');
         try {
-            const response = await axios.post("http://13.48.249.94:3001/trading/Stop-trading", {
-                token,
-            });
+            const response = await axios.post("https://profitpilot.ddns.net/trading/Stop-trading", { token });
             if (response.status === 200) {
-                setError("Trading has Stopped");
+                setError("Trading has stopped");
                 setTrading(false);
                 setTradingStatus("Stopped");
-                setIsLoading(false);
-                setIsOpen(true);
             }
         } catch (error) {
-            if (error.response && error.response.status === 404) {
-                setError(error.response.data.error);
-                setIsOpen(true);
-
-            }
-            else if (error.response && error.response.status === 401) {
-                setError(error.response.data.error);
-                setIsOpen(true);
-            } else if (error.request) {
-                setError("Something went wrong on our side.");
-                setIsOpen(true);
-            } else {
-                setError('An error occurred. Please try again.');
-                setIsOpen(true);
-            }
+            handleError('Failed to stop trading');
         } finally {
             setIsLoading(false);
         }
     }, []);
 
+    // Check subscription
     const CheckSubscription = useCallback(async () => {
         setIsOpenDisclaimer(true);
         setIsLoading(true);
         const token = await SecureStore.getItemAsync('token');
         try {
-            const response = await axios.post("http://13.48.249.94:3001/subscriptions/check-subscription", {
-                token,
-            });
+            const response = await axios.post("https://profitpilot.ddns.net/subscriptions/check-subscription", { token });
             if (response.status === 200) {
-
-                await handleSubmit(token, account, server, password, selectedBroker, profit, selectedPair);
-                return;
+                await handleSubmit();
             }
         } catch (error) {
-            if (error.response && error.response.status === 404) {
-                setError(error.response.data.error);
-                setIsOpen(true);
-            }
-            else if (error.response && error.response.status === 401) {
-                setError(error.response.data.error);
-                setIsOpen(true);
-            } else if (error.request) {
-                setError("Something went wrong on our side.");
-                setIsOpen(true);
-            } else {
-                setError('An error occurred. Please try again.');
-                setIsOpen(true);
-            }
+            handleError('Failed to check subscription');
         } finally {
             setIsLoading(false);
         }
-    }, [account, server, password, selectedBroker, Trading, profit, selectedPair]);
+    }, [handleSubmit]);
 
+    // Centralized error handler
+    const handleError = (message) => {
+        setError(message);
+        setIsOpen(true);
+        setTradingStatus("Failed to start");
+    };
 
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
-                        <Image
-                            source={require('../../assets/logo.jpeg')}
-                            style={{
-                                width: '100%',
-                                height: '100%'
-                            }}
-                        />
+                        <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
                     </View>
                 </View>
                 <View style={styles.blackScreen}>
-                    <Text style={styles.pingText}>
-                        {tradingStatus}
-
-                    </Text>
-                    {Trading && (
-                        <Text style={{ color: 'green', marginTop: 10 }}>AI has started trading for you</Text>
-                    )}
+                    <Text style={styles.pingText}>{tradingStatus}</Text>
+                    {trading && <Text style={styles.tradingText}>AI has started trading for you</Text>}
                 </View>
-                
-                <View >
+                <View>
                     <Picker
                         selectedValue={selectedBroker}
                         style={styles.picker}
                         onValueChange={handleBrokerChange}
-                        enabled={!Trading && !isLoading}
+                        enabled={!trading && !isLoading}
                     >
                         <Picker.Item label="Select Broker" value="" />
                         {Object.keys(brokerServers).map((broker) => (
                             <Picker.Item key={broker} label={broker} value={broker} />
                         ))}
                     </Picker>
-                    <View >
-                        <Picker
-                            selectedValue={selectedPair}
-                            onValueChange={(itemValue) => setSelectedPair(itemValue)}
-                            style={styles.picker}
-                            itemStyle={styles.pickerItem}
-                            enabled={!Trading && !isLoading}
-                        >
-                            <Picker.Item label="Select a pair..." value="" />
-                            {forexPairs.map((pair) => (
-                                <Picker.Item key={pair.value} label={pair.label} value={pair.value} />
-                            ))}
-                        </Picker>
-                    </View>
-                    <View style={styles.formBox}>
-                    {selectedBroker !== '' && (
-                        <>
-                        
-                            <View style={styles.passwordInputContainer}>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Account"
-                                    value={account}
-                                    onChangeText={setAccount}
-                                    keyboardType="numeric"
-                                    editable={!Trading && !isLoading}
-                                />
-                            </View>
+                    {selectedBroker && (
+                        <View style={styles.formBox}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Account"
+                                value={account}
+                                onChangeText={setAccount}
+                                keyboardType="numeric"
+                                editable={!trading && !isLoading}
+                            />
                             <View style={styles.passwordInputContainer}>
                                 <TextInput
                                     style={[styles.input, styles.passwordInput]}
                                     placeholder="Password"
                                     value={password}
-                                    importantForAutofill="noExcludeDescendants"
                                     onChangeText={setPassword}
-                                    editable={!Trading && !isLoading}
                                     secureTextEntry={!isPasswordVisible}
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     keyboardType="default"
                                     returnKeyType="done"
                                     textContentType="password"
+                                    editable={!trading && !isLoading}
                                 />
                                 <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIcon}>
                                     <MaterialCommunityIcons name={isPasswordVisible ? 'eye-off' : 'eye'} size={24} color="#6b7280" />
                                 </TouchableOpacity>
                             </View>
-
-                            <View style={styles.passwordInputContainer}>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Daily Profit"
-                                    value={profit}
-                                    onChangeText={setProfit}
-                                    keyboardType="numeric"
-                                    editable={!Trading && !isLoading}
-                                />
-                            </View>
-
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Daily Profit"
+                                value={profit}
+                                onChangeText={setProfit}
+                                keyboardType="numeric"
+                                editable={!trading && !isLoading}
+                            />
                             <Picker
                                 selectedValue={server}
                                 style={styles.picker}
                                 onValueChange={setServer}
-                                enabled={!Trading && !isLoading}
+                                enabled={!trading && !isLoading}
                             >
                                 <Picker.Item label="Select Server" value="" />
                                 {serverOptions.map((option, index) => (
                                     <Picker.Item key={index} label={option} value={option} />
                                 ))}
                             </Picker>
-                        </>
+                        </View>
                     )}
                 </View>
-                </View>
-
                 <View style={styles.formAction}>
                     {isLoading ? (
                         <ActivityIndicator size="large" color="#0000ff" />
                     ) : (
-                        <TouchableOpacity
-                            onPress={CheckSubscription}
-                            disabled={isButtonDisabled}
-                        >
-                            <View style={[styles.btn, isButtonDisabled && styles.disabledBtn, Trading && { backgroundColor: 'red' }]}>
-                                <Text style={styles.btnText}>{Trading ? 'Stop' : 'Start'}</Text>
+                        <TouchableOpacity onPress={CheckSubscription} disabled={isButtonDisabled}>
+                            <View style={[styles.btn, isButtonDisabled && styles.disabledBtn, trading && styles.tradingBtn]}>
+                                <Text style={styles.btnText}>{trading ? 'Stop Trading' : 'Start Trading'}</Text>
                             </View>
                         </TouchableOpacity>
                     )}
-
-
                 </View>
-
-                <View style={styles.navigation}>
+                <ErrorModal visible={isOpen} onClose={handleCloseError} message={error} />
+                <DisclaimerModal visible={isOpenDisclaimer} onClose={handleCloseDisclaimer} />
+            </View>
+            <View style={styles.navigation}>
                     <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
                         <Ionicons name="home" size={24} color="black" />
                         <Text style={styles.iconText}>Home</Text>
@@ -380,123 +268,88 @@ const Home = ({ navigation }) => {
                     </TouchableOpacity>
 
                 </View>
-
-                <ErrorModal isOpen={isOpen} error={error} onClose={handleCloseError} />
-                <DisclaimerModal isOpen={isOpenDisclaimer} onClose={handleCloseDisclaimer} />
-            </View>
         </SafeAreaView>
     );
 };
 
-
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        padding: 16,
+        justifyContent: 'center',
     },
     header: {
-        marginVertical: 36,
         alignItems: 'center',
+        marginBottom: 20,
     },
     logoContainer: {
-        width: 100,
-        height: 100,
         borderRadius: 50,
         overflow: 'hidden',
-        marginBottom: 12,
     },
     logo: {
-        width: '100%',
-        height: '100%',
+        width: 100,
+        height: 100,
     },
     blackScreen: {
-        width: '100%',
-        backgroundColor: 'white',
-        alignItems: 'center',
-        justifyContent: 'center',
         marginBottom: 20,
-        borderRadius: 15,
     },
     pingText: {
-        color: 'blue',
-        fontSize: 18,
-    },
-    loadingText: {
-        color: 'red',
-        marginTop: 10,
+        fontSize: 20,
+        fontWeight: 'bold',
         textAlign: 'center',
     },
     tradingText: {
-        color: 'red',
-        marginTop: 10,
+        fontSize: 16,
         textAlign: 'center',
     },
-
     formBox: {
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        padding: 20,
-        borderRadius: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 5,
-        marginBottom: 10,
-       
-    },
-
-    picker: {
-        height: 50,
-        width: '100%',
-        backgroundColor: '#fff',
-        marginBottom: 10,
-        borderRadius: 5,
-        borderWidth: 4,
-    },
-    inputContainer: {
-        marginBottom: 20,
-        alignItems: 'center',
+        marginTop: 20,
     },
     input: {
-        height: 50,
-        width: '100%',
-        paddingHorizontal: 10,
-        backgroundColor: '#fff',
-        borderRadius: 5,
-        borderColor: '#ccc',
-        borderWidth: 2,
-
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
+        marginBottom: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        fontSize: 16,
     },
     passwordInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
     },
     passwordInput: {
-        paddingRight: 40,
+        flex: 1,
     },
     eyeIcon: {
-        position: 'absolute',
-        right: 10,
+        marginLeft: 10,
+    },
+    picker: {
+        marginBottom: 10,
     },
     formAction: {
+        marginTop: 20,
         alignItems: 'center',
     },
     btn: {
-        width: 150,
-        height: 50,
-        backgroundColor: '#2e7d32',
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: '#007BFF',
+        paddingVertical: 15,
+        paddingHorizontal: 30,
         borderRadius: 5,
     },
     btnText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     disabledBtn: {
-        backgroundColor: '#888',
+        backgroundColor: '#d6d6d6',
+    },
+    tradingBtn: {
+        backgroundColor: '#28a745',
     },
 
     navigation: {
@@ -518,7 +371,5 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
 });
-
-
 
 export default Home;
