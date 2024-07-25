@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import ErrorModal from '../../components/ErrorModal';
 
 const Subscriptions = ({ navigation }) => {
     const [loadingStates, setLoadingStates] = useState({
@@ -21,10 +22,18 @@ const Subscriptions = ({ navigation }) => {
         '2': false,
         '3': false,
     });
-    const [location, setLocation] = useState('USA');
+    const [location, setLocation] = useState('');
     const [plans, setPlans] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const [error, setError] = useState(null);
+
+    const handleCloseError = () => {
+      setIsOpen(false);
+      setError(null);
+    };
 
     const convertToDollar = (price) => {
         const randToDollarRate = 1 / 17;
@@ -34,7 +43,7 @@ const Subscriptions = ({ navigation }) => {
 
     const fetchPlans = useCallback(async (countryCode) => {
         setIsLoading(true);
-        const token = await SecureStore.getItemAsync('token');
+        const token = await AsyncStorage.getItem('token');
 
         try {
             const response = await axios.post('https://profitpilot.ddns.net/subscriptions/plans', { token });
@@ -49,7 +58,8 @@ const Subscriptions = ({ navigation }) => {
                 setPlans(fetchedPlans);
             }
         } catch (err) {
-            console.error('Error fetching plans:', err);
+            handleError(err);
+          
         } finally {
             setIsLoading(false);
         }
@@ -84,7 +94,8 @@ const Subscriptions = ({ navigation }) => {
         async (planId) => {
             setIsButtonDisabled(true);
             setLoadingStates((prevState) => ({ ...prevState, [planId]: true }));
-            const token = await SecureStore.getItemAsync('token');
+            const token = await AsyncStorage.getItem('token');
+          
             
             try {
                 const response = await axios.post(
@@ -98,7 +109,7 @@ const Subscriptions = ({ navigation }) => {
                     });
                 }
             } catch (err) {
-                console.error('Error:', err);
+                handleError(err);
             } finally {
                 setLoadingStates((prevState) => ({ ...prevState, [planId]: false }));
                 setIsButtonDisabled(false);
@@ -106,6 +117,18 @@ const Subscriptions = ({ navigation }) => {
         },
         [location, navigation]
     );
+
+    const handleError = (error) => {
+        if (error.response) {
+          const message = error.response.data.error || 'An error occurred. Please try again.';
+          setError(message);
+        } else if (error.request) {
+          setError('Network error. Please check your connection.');
+        } else {
+          setError('An unexpected error occurred.');
+        }
+        setIsOpen(true);
+      };
 
     const renderPlan = (plan) => (
         <View key={plan.id} style={styles.planContainer}>
@@ -142,6 +165,8 @@ const Subscriptions = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.content}>
                 {plans.map(renderPlan)}
             </ScrollView>
+
+            <ErrorModal isOpen={isOpen} error={error} onClose={handleCloseError} />
           
         </SafeAreaView>
     );

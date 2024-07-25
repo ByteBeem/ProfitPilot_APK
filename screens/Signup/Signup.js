@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, Image, TextInput, ActivityIndicator,ScrollView ,Platform, KeyboardAvoidingView,TouchableOpacity } from "react-native";
-import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
-const Signup = () => {
-    const navigation = useNavigation();
+const Signup = ({navigation}) => {
+   
     const [form, setForm] = useState({
         email: '',
         password: '',

@@ -32,9 +32,7 @@
         "projectId": "1d1556dc-8909-4a72-b7eb-6eabf31fffd7"
       }
     },
-    "plugins": [
-      "expo-secure-store"
-    ],
+    
     "owner": "themxolisi"
   }
 }

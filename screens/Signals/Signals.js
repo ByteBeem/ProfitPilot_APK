@@ -3,7 +3,7 @@ import { View, Text, Button, StyleSheet, ActivityIndicator, TouchableOpacity, Im
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ErrorModal from '../../components/ErrorModal';
 
 const forexPairs = [
@@ -48,14 +48,17 @@ const Signals = ({ navigation }) => {
     setIsLoading(true);
     setSignal(null);
 
-    const token = await SecureStore.getItemAsync('token');
+    const token = await AsyncStorage.getItem('token');
+   
     try {
       const { status } = await axios.post('https://profitpilot.ddns.net/subscriptions/check-subscription', { token });
+      
 
       if (status === 200) {
         await fetchSignal(token, selectedPair);
       }
     } catch (error) {
+     
       handleError(error);
     } finally {
       setIsLoading(false);

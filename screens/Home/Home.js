@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, SafeAreaView, Image, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 import { Picker } from "@react-native-picker/picker";
 import axios from 'axios';
 import ErrorModal from '../../components/ErrorModal';
@@ -93,7 +92,7 @@ const Home = ({ navigation }) => {
     const handleSubmit = useCallback(async () => {
         setIsLoading(true);
         try {
-            const token = await SecureStore.getItemAsync('token');
+            const token = await AsyncStorage.getItem('token');
             if (trading) {
                 setTradingStatus("Stopping, please wait...");
                 await AsyncStorage.clear();
@@ -117,7 +116,7 @@ const Home = ({ navigation }) => {
                 }
             }
         } catch (error) {
-            handleError('Failed to start trading');
+            handleError(error);
         } finally {
             setIsLoading(false);
         }
@@ -126,7 +125,7 @@ const Home = ({ navigation }) => {
     // Stop trading
     const StopTrading = useCallback(async () => {
         setIsLoading(true);
-        const token = await SecureStore.getItemAsync('token');
+        const token = await AsyncStorage.getItem('token');
         try {
             const response = await axios.post("https://profitpilot.ddns.net/trading/Stop-trading", { token });
             if (response.status === 200) {
@@ -141,29 +140,37 @@ const Home = ({ navigation }) => {
         }
     }, []);
 
-    // Check subscription
     const CheckSubscription = useCallback(async () => {
         setIsOpenDisclaimer(true);
         setIsLoading(true);
-        const token = await SecureStore.getItemAsync('token');
+    
+        const token = await AsyncStorage.getItem('token');
+        
         try {
-            const response = await axios.post("https://profitpilot.ddns.net/subscriptions/check-subscription", { token });
+            const response = await axios.post('https://profitpilot.ddns.net/subscriptions/check-subscription', { token });
+            
             if (response.status === 200) {
                 await handleSubmit();
             }
         } catch (error) {
-            handleError('Failed to check subscription');
+           
+            handleError(error);
         } finally {
             setIsLoading(false);
         }
     }, [handleSubmit]);
 
-    // Centralized error handler
-    const handleError = (message) => {
-        setError(message);
+    const handleError = (error) => {
+        if (error.response) {
+          const message = error.response.data.error || 'An error occurred. Please try again.';
+          setError(message);
+        } else if (error.request) {
+          setError('Network error. Please check your connection.');
+        } else {
+          setError('An unexpected error occurred.');
+        }
         setIsOpen(true);
-        setTradingStatus("Failed to start");
-    };
+      };
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -250,8 +257,8 @@ const Home = ({ navigation }) => {
                         </TouchableOpacity>
                     )}
                 </View>
-                <ErrorModal visible={isOpen} onClose={handleCloseError} message={error} />
-                <DisclaimerModal visible={isOpenDisclaimer} onClose={handleCloseDisclaimer} />
+                <ErrorModal isOpen={isOpen} onClose={handleCloseError} error={error} />
+                <DisclaimerModal isOpen={isOpenDisclaimer} onClose={handleCloseDisclaimer} />
             </View>
             <View style={styles.navigation}>
                     <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
@@ -275,7 +282,7 @@ const Home = ({ navigation }) => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#F5F5F5',
     },
     container: {
         flex: 1,

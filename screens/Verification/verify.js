@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ErrorModal from '../../components/ErrorModal';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Verify() {
     const route = useRoute();
@@ -37,7 +37,7 @@ export default function Verify() {
 
             if (response.status === 200) {
                 if (type === 'signup') {
-                    await SecureStore.setItemAsync('token', response.data.token);
+                    await AsyncStorage.setItem('token', response.data.token);
                     navigation.navigate('Home');
                 } else if (type === 'reset') {
                     navigation.navigate('Change', { email, serverToken: response.data.token });

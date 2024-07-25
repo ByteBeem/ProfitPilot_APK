@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ErrorModal from '../../components/ErrorModal';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 const ChangePassword = () => {
@@ -49,7 +49,7 @@ const ChangePassword = () => {
             });
 
             if (response.status === 200) {
-                await SecureStore.setItemAsync('token', response.data.token);
+                await AsyncStorage.setItem('token', response.data.token);
                 navigation.navigate('Home');
             }
         } catch (error) {

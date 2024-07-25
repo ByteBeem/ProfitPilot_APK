@@ -3,7 +3,7 @@ import { SafeAreaView, View, Text, StyleSheet, Image, TextInput, TouchableOpacit
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ErrorModal from '../../components/ErrorModal'; 
 
 const API_URL = "https://profitpilot.ddns.net/auth/login"; 
@@ -55,7 +55,7 @@ const Login = () => {
         try {
             const { data, status } = await axios.post(API_URL, form);
             if (status === 200) {
-                await SecureStore.setItemAsync('token', data.token);
+                await AsyncStorage.setItem('token', data.token);
                 navigation.navigate('Home');
             }
         } catch (err) {

@@ -2,9 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import LottieView from "lottie-react-native";
-import { SIZES } from '../../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const Profile = ({ navigation }) => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -14,7 +13,7 @@ const Profile = ({ navigation }) => {
     const handleLogOut = useCallback(async () => {
         setIsLoggingOut(true);
         try {
-            await SecureStore.deleteItemAsync('token');
+            await AsyncStorage.clear();
             navigation.navigate("Login");
         } catch (err) {
            
@@ -24,7 +23,7 @@ const Profile = ({ navigation }) => {
     }, [navigation]);
 
     const fetchUserData = useCallback(async () => {
-        const token = await SecureStore.getItemAsync('token');
+        const token = await AsyncStorage.getItem('token');
         if (!token) return;
 
         setIsLoading(true);
@@ -68,14 +67,6 @@ const Profile = ({ navigation }) => {
                 For any enquiries, email: <Text style={styles.label}>forex929@proton.me</Text>
             </Text>
 
-            <View style={styles.animationContainer}>
-                <LottieView
-                    source={require("../../assets/animation.json")}
-                    autoPlay
-                    loop
-                    style={styles.animation}
-                />
-            </View>
 
             <View style={styles.navigation}>
                 <TouchableOpacity style={styles.iconContainer} onPress={() => navigation.navigate('Home')}>
@@ -161,17 +152,7 @@ const styles = StyleSheet.create({
         textAlign: 'left',
         lineHeight: 22,
     },
-    animationContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginHorizontal: 22,
-        marginVertical: 48,
-    },
-    animation: {
-        width: SIZES.width * 0.8,
-        height: SIZES.width * 0.9,
-    },
+   
     navigation: {
         position: 'absolute',
         bottom: 0,
